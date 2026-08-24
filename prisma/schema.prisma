@@ -1,0 +1,243 @@
+// SIH 2026 Internal Hackathon Registration Portal
+// Data integrity constraints are load-bearing — see spec §91 (uniqueness), §92 (invariants).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model College {
+  id                String            @id @default(cuid())
+  slug              String            @unique
+  name              String
+  emailDomain       String
+  timezone          String            @default("Asia/Kolkata")
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  cohorts           Cohort[]
+  students          Student[]
+  teams             Team[]
+  problemStatements ProblemStatement[]
+  admins            Admin[]
+  settings          AppSetting[]
+}
+
+model Cohort {
+  id           String    @id @default(cuid())
+  collegeId    String
+  batchYear    Int
+  displayName  String
+  yearOfStudy  Int
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  college      College   @relation(fields: [collegeId], references: [id])
+  students     Student[]
+
+  @@unique([collegeId, batchYear])
+}
+
+model Student {
+  id                     String        @id @default(cuid())
+  collegeId              String
+  cohortId               String
+  fullName               String
+  normalizedName         String
+  rollNumber             String
+  normalizedRollNumber   String
+  collegeEmail           String
+  normalizedEmail        String
+  mobileNumber           String?
+  gender                 String
+  branch                 String
+  section                String?
+  isActive               Boolean       @default(true)
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  college                College       @relation(fields: [collegeId], references: [id])
+  cohort                 Cohort        @relation(fields: [cohortId], references: [id])
+  teamMemberships        TeamMember[]
+  teamsLed               Team[]        @relation("TeamLeader")
+
+  @@unique([collegeId, normalizedEmail])
+  @@unique([cohortId, normalizedRollNumber])
+  @@index([collegeId, isActive])
+}
+
+model Admin {
+  id             String    @id @default(cuid())
+  collegeId      String
+  username       String
+  passwordHash   String
+  fullName       String
+  role           String    // SUPER_ADMIN | SPOC_ADMIN | REVIEWER | READ_ONLY
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  college        College   @relation(fields: [collegeId], references: [id])
+  auditEvents    AuditLog[]
+
+  @@unique([collegeId, username])
+}
+
+model ProblemStatement {
+  id                     String                    @id @default(cuid())
+  collegeId              String
+  psNumber               String
+  normalizedPsNumber     String
+  title                  String
+  organization           String
+  theme                  String
+  category               String
+  description            String
+  status                 String                    @default("ACTIVE")  // ACTIVE | INACTIVE | ARCHIVED
+  source                 String                    @default("MANUAL")
+  sourceVersion          String                    @default("2026")
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+
+  college                College                   @relation(fields: [collegeId], references: [id])
+  teamAssignments        TeamProblemStatement[]
+
+  @@unique([collegeId, normalizedPsNumber])
+  @@index([status])
+}
+
+model Team {
+  id                    String                  @id @default(cuid())
+  collegeId             String
+  teamCode              String                  @unique  // human-readable ISU-SIH-XXXX
+  teamName              String
+  normalizedTeamName    String
+  leaderStudentId       String
+  status                String                  @default("DRAFT")
+  // DRAFT | READY | SUBMITTED | CORRECTION_REQUIRED | APPROVED | REJECTED | LOCKED | WITHDRAWN
+  guidelinesAcceptedAt  DateTime?
+  submittedAt           DateTime?
+  lockedAt              DateTime?
+  version               Int                     @default(1)
+  idempotencyKey        String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  college               College                 @relation(fields: [collegeId], references: [id])
+  leader                Student                 @relation("TeamLeader", fields: [leaderStudentId], references: [id])
+  members               TeamMember[]
+  psAssignments         TeamProblemStatement[]
+  snapshot              TeamSnapshot?
+
+  @@unique([collegeId, normalizedTeamName])
+  @@index([status])
+}
+
+model TeamMember {
+  id             String    @id @default(cuid())
+  teamId         String
+  studentId      String
+  role           String    // LEADER | MEMBER
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  team           Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  student        Student   @relation(fields: [studentId], references: [id])
+
+  @@unique([teamId, studentId])
+  // One student may only belong to ONE active team at a time (spec §18)
+  @@unique([studentId, isActive])
+  @@index([teamId])
+}
+
+model TeamProblemStatement {
+  id           String            @id @default(cuid())
+  teamId       String
+  psId         String
+  createdAt    DateTime          @default(now())
+
+  team         Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  ps           ProblemStatement  @relation(fields: [psId], references: [id])
+
+  // Same team cannot pick the same PS twice (§31/§52). Different teams CAN share a PS (§29).
+  @@unique([teamId, psId])
+  // Enforce "one PS per team" for internal registration (§32).
+  @@unique([teamId])
+}
+
+// Frozen point-in-time copy taken at final registration (§76).
+model TeamSnapshot {
+  id                String    @id @default(cuid())
+  teamId            String    @unique
+  payload           String    // JSON blob
+  registeredAt      DateTime  @default(now())
+
+  team              Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+model OtpChallenge {
+  id             String    @id @default(cuid())
+  email          String
+  otpHash        String
+  attempts       Int       @default(0)
+  isConsumed     Boolean   @default(false)
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+
+  @@index([email, isConsumed])
+}
+
+model StudentSession {
+  id             String    @id @default(cuid())
+  studentId      String
+  createdAt      DateTime  @default(now())
+  lastSeenAt     DateTime  @default(now())
+  revokedAt      DateTime?
+}
+
+model AuditLog {
+  id             String    @id @default(cuid())
+  actorType      String    // STUDENT | ADMIN | SYSTEM
+  actorId        String?
+  adminId        String?
+  action         String
+  resource       String
+  resourceId     String?
+  requestId      String?
+  reason         String?
+  before         String?   // JSON
+  after          String?   // JSON
+  ip             String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+
+  admin          Admin?    @relation(fields: [adminId], references: [id])
+
+  @@index([resource, resourceId])
+  @@index([createdAt])
+}
+
+model AppSetting {
+  id                     String    @id @default(cuid())
+  collegeId              String
+  key                    String
+  value                  String
+  updatedAt              DateTime  @updatedAt
+
+  college                College   @relation(fields: [collegeId], references: [id])
+
+  @@unique([collegeId, key])
+}
+
+model RateLimitBucket {
+  id             String    @id @default(cuid())
+  bucketKey      String    @unique
+  count          Int       @default(0)
+  windowStart    DateTime  @default(now())
+}
