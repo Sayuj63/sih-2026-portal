@@ -47,14 +47,13 @@ export async function POST(req: NextRequest) {
   });
 
   // Anti-enumeration (§86): behave the same whether the email exists or not.
+  let devOtp: string | undefined;
   if (student && student.isActive) {
     const { otp, expiresAt } = await issueOtp(normalizedEmail);
     if (config.otp.devEcho) {
-      // Server console only. Never returned in the response.
-      console.log(`\n╔══════════════════════════════════════════════════╗`);
-      console.log(`║  DEV OTP for ${normalizedEmail.padEnd(32)} ║`);
-      console.log(`║  ${otp}  (expires ${expiresAt.toISOString()})  ║`);
-      console.log(`╚══════════════════════════════════════════════════╝\n`);
+      console.log(`[DEV] OTP for ${normalizedEmail}: ${otp} (expires ${expiresAt.toISOString()})`);
+      // Demo mode surfaces the code to the client. Set DEV_ECHO_OTP=false in a real deployment.
+      devOtp = otp;
     } else if (config.smtp.url) {
       // Real SMTP would go here.
     }
@@ -68,7 +67,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return ok({ sent: true, ttlSec: config.otp.ttlSec });
+  return ok({ sent: true, ttlSec: config.otp.ttlSec, ...(devOtp ? { devOtp } : {}) });
 }
 
 async function safeJson(req: NextRequest) {

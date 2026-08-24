@@ -21,7 +21,7 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     setInfo(null);
-    const r = await api<{ sent: true; ttlSec: number }>("/api/auth/student/otp", {
+    const r = await api<{ sent: true; ttlSec: number; devOtp?: string }>("/api/auth/student/otp", {
       method: "POST",
       body: JSON.stringify({ email }),
     });
@@ -30,7 +30,12 @@ export default function LoginPage() {
       setError(r.error.message);
       return;
     }
-    setInfo(`If ${email} is a registered college address, a 6-digit code has been sent. Check the server console (dev mode) or your inbox.`);
+    if (r.data.devOtp) {
+      setInfo(`Demo mode — your OTP is ${r.data.devOtp}. In production this is emailed to ${email}.`);
+      setOtp(r.data.devOtp);
+    } else {
+      setInfo(`If ${email} is a registered college address, a 6-digit code has been sent.`);
+    }
     setStep("otp");
   }
 

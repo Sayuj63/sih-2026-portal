@@ -29,6 +29,10 @@ export default function Home() {
       }
     >
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+        <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <b>Live demo</b> — sign in as <code className="rounded bg-white/70 px-1">sayuj.cse101@isu.ac.in</code> (or any seeded student — see the <a className="underline" href="https://github.com/Sayuj63/sih-2026-portal#demo-login" target="_blank" rel="noopener">seeded roster</a>). In demo mode the OTP is displayed on-screen so you can complete the flow without email. Admin credentials are provided to the ISU SPOC separately.
+        </div>
+
         <section className="grid gap-8 md:grid-cols-[3fr_2fr] items-start">
           <div>
             <Badge tone="info">Smart India Hackathon 2026</Badge>
