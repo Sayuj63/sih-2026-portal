@@ -1,22 +1,29 @@
 import "dotenv/config";
 import { hash } from "@node-rs/argon2";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { normalizeEmail, normalizeName, normalizeRollNumber } from "../src/lib/validation";
 import { config } from "../src/lib/config";
 
-const dbFile = config.databaseUrl.startsWith("file:") ? config.databaseUrl.slice(5) : config.databaseUrl;
-const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: dbFile }) });
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: config.databaseUrl }) });
 
+// ISU 2026 cohort roster — verified against the college groups list.
 const COHORTS = [
-  { batchYear: 2023, displayName: "Steve Jobs",       yearOfStudy: 4 },
-  { batchYear: 2024, displayName: "Mark Zuckerberg",  yearOfStudy: 3 },
-  { batchYear: 2025, displayName: "Sam Altman",       yearOfStudy: 2 },
-  { batchYear: 2026, displayName: "Tim Cook",         yearOfStudy: 1 },
+  { slug: "steve-jobs-2023",       batchYear: 2023, displayName: "Steve Jobs",       program: "BTech CSE",      yearOfStudy: 4 },
+  { slug: "mark-zuckerberg-2024",  batchYear: 2024, displayName: "Mark Zuckerberg",  program: "BTech CSE",      yearOfStudy: 3 },
+  { slug: "elon-musk-2024",        batchYear: 2024, displayName: "Elon Musk",        program: "BTech CSE",      yearOfStudy: 3 },
+  { slug: "jensen-huang-2024",     batchYear: 2024, displayName: "Jensen Huang",     program: "BTech CSE",      yearOfStudy: 3 },
+  { slug: "sam-altman-2025",       batchYear: 2025, displayName: "Sam Altman",       program: "BTech CSE",      yearOfStudy: 2 },
+  { slug: "larry-page-2025",       batchYear: 2025, displayName: "Larry Page",       program: "BTech CSE",      yearOfStudy: 2 },
+  { slug: "jeff-bezos-2025",       batchYear: 2025, displayName: "Jeff Bezos",       program: "BTech CSE",      yearOfStudy: 2 },
+  { slug: "demis-hassabis-2025",   batchYear: 2025, displayName: "Demis Hassabis",   program: "BTech CSE",      yearOfStudy: 2 },
+  { slug: "tim-cook-2026",         batchYear: 2026, displayName: "Tim Cook",         program: "BTech CSE & AI", yearOfStudy: 1 },
+  { slug: "andrew-ng-2026",        batchYear: 2026, displayName: "Andrew NG",        program: "BTech CSE & AI", yearOfStudy: 1 },
+  { slug: "jerry-sanders-2026",    batchYear: 2026, displayName: "Jerry Sanders",    program: "BTech CSE & AI", yearOfStudy: 1 },
 ];
 
 type SeedStudent = {
-  batchYear: number;
+  cohortSlug: string;
   rollNumber: string;
   fullName: string;
   gender: "MALE" | "FEMALE" | "OTHER";
@@ -24,41 +31,33 @@ type SeedStudent = {
   section?: string;
 };
 
+// Small demo roster spanning several cohorts. Roll numbers repeat across cohorts
+// on purpose — that's the whole point of the cohort-scoped uniqueness rule.
 const STUDENTS: SeedStudent[] = [
-  // 2023 — Steve Jobs — 4th year
-  { batchYear: 2023, rollNumber: "CSE001", fullName: "Aarav Sharma",     gender: "MALE",   branch: "CSE" },
-  { batchYear: 2023, rollNumber: "CSE002", fullName: "Isha Verma",       gender: "FEMALE", branch: "CSE" },
-  { batchYear: 2023, rollNumber: "CSE007", fullName: "Rohan Iyer",       gender: "MALE",   branch: "CSE" },
-  { batchYear: 2023, rollNumber: "ECE003", fullName: "Priya Nair",       gender: "FEMALE", branch: "ECE" },
-  { batchYear: 2023, rollNumber: "MEC004", fullName: "Vikram Menon",     gender: "MALE",   branch: "MEC" },
-  { batchYear: 2023, rollNumber: "CSE010", fullName: "Sneha Reddy",      gender: "FEMALE", branch: "CSE" },
-  { batchYear: 2023, rollNumber: "CSE011", fullName: "Karan Malhotra",   gender: "MALE",   branch: "CSE" },
+  { cohortSlug: "steve-jobs-2023",       rollNumber: "CSE001", fullName: "Aarav Sharma",     gender: "MALE",   branch: "CSE" },
+  { cohortSlug: "steve-jobs-2023",       rollNumber: "CSE002", fullName: "Isha Verma",       gender: "FEMALE", branch: "CSE" },
+  { cohortSlug: "steve-jobs-2023",       rollNumber: "CSE007", fullName: "Rohan Iyer",       gender: "MALE",   branch: "CSE" },
 
-  // 2024 — Mark Zuckerberg — 3rd year
-  { batchYear: 2024, rollNumber: "CSE101", fullName: "Sayuj Pillai",     gender: "MALE",   branch: "CSE" },
-  { batchYear: 2024, rollNumber: "CSE102", fullName: "Ananya Krishnan",  gender: "FEMALE", branch: "CSE" },
-  { batchYear: 2024, rollNumber: "CSE107", fullName: "Devansh Rao",      gender: "MALE",   branch: "CSE" },
-  { batchYear: 2024, rollNumber: "ECE105", fullName: "Meera Kapoor",     gender: "FEMALE", branch: "ECE" },
-  { batchYear: 2024, rollNumber: "CSE110", fullName: "Aryan Chandra",    gender: "MALE",   branch: "CSE" },
-  { batchYear: 2024, rollNumber: "AI115",  fullName: "Riya Bhatt",       gender: "FEMALE", branch: "AI" },
-  { batchYear: 2024, rollNumber: "AI117",  fullName: "Kabir Anand",      gender: "MALE",   branch: "AI" },
+  { cohortSlug: "mark-zuckerberg-2024",  rollNumber: "CSE101", fullName: "Sayuj Pillai",     gender: "MALE",   branch: "CSE" },
+  { cohortSlug: "mark-zuckerberg-2024",  rollNumber: "CSE102", fullName: "Ananya Krishnan",  gender: "FEMALE", branch: "CSE" },
+  { cohortSlug: "mark-zuckerberg-2024",  rollNumber: "CSE107", fullName: "Devansh Rao",      gender: "MALE",   branch: "CSE" },
 
-  // 2025 — Sam Altman — 2nd year
-  { batchYear: 2025, rollNumber: "CSE107", fullName: "Ishaan Deshmukh",  gender: "MALE",   branch: "CSE" }, // duplicates 2024/CSE107 across cohorts — legal
-  { batchYear: 2025, rollNumber: "CSE201", fullName: "Aditi Bose",       gender: "FEMALE", branch: "CSE" },
-  { batchYear: 2025, rollNumber: "CSE202", fullName: "Rahul Gupta",      gender: "MALE",   branch: "CSE" },
-  { batchYear: 2025, rollNumber: "ECE203", fullName: "Neha Joshi",       gender: "FEMALE", branch: "ECE" },
-  { batchYear: 2025, rollNumber: "MEC205", fullName: "Yash Kulkarni",    gender: "MALE",   branch: "MEC" },
-  { batchYear: 2025, rollNumber: "AI210",  fullName: "Zara Khan",        gender: "FEMALE", branch: "AI" },
-  { batchYear: 2025, rollNumber: "AI212",  fullName: "Aditya Rathi",     gender: "MALE",   branch: "AI" },
+  { cohortSlug: "elon-musk-2024",        rollNumber: "CSE101", fullName: "Karan Bhatia",     gender: "MALE",   branch: "CSE" },
+  { cohortSlug: "elon-musk-2024",        rollNumber: "CSE105", fullName: "Meera Kapoor",     gender: "FEMALE", branch: "CSE" },
+  { cohortSlug: "jensen-huang-2024",     rollNumber: "CSE110", fullName: "Aryan Chandra",    gender: "MALE",   branch: "CSE" },
+  { cohortSlug: "jensen-huang-2024",     rollNumber: "CSE115", fullName: "Riya Bhatt",       gender: "FEMALE", branch: "CSE" },
 
-  // 2026 — Tim Cook — 1st year
-  { batchYear: 2026, rollNumber: "CSE107", fullName: "Nitya Suri",       gender: "FEMALE", branch: "CSE" }, // duplicates roll across cohorts — legal
-  { batchYear: 2026, rollNumber: "CSE301", fullName: "Ayaan Bakshi",     gender: "MALE",   branch: "CSE" },
-  { batchYear: 2026, rollNumber: "CSE302", fullName: "Diya Chaturvedi",  gender: "FEMALE", branch: "CSE" },
-  { batchYear: 2026, rollNumber: "ECE310", fullName: "Vivaan Saxena",    gender: "MALE",   branch: "ECE" },
-  { batchYear: 2026, rollNumber: "AI320",  fullName: "Tara Ghosh",       gender: "FEMALE", branch: "AI" },
-  { batchYear: 2026, rollNumber: "AI322",  fullName: "Om Prakash",       gender: "MALE",   branch: "AI" },
+  { cohortSlug: "sam-altman-2025",       rollNumber: "CSE201", fullName: "Aditi Bose",       gender: "FEMALE", branch: "CSE" },
+  { cohortSlug: "sam-altman-2025",       rollNumber: "CSE202", fullName: "Rahul Gupta",      gender: "MALE",   branch: "CSE" },
+  { cohortSlug: "larry-page-2025",       rollNumber: "CSE201", fullName: "Neha Joshi",       gender: "FEMALE", branch: "CSE" },
+  { cohortSlug: "jeff-bezos-2025",       rollNumber: "CSE203", fullName: "Yash Kulkarni",    gender: "MALE",   branch: "CSE" },
+  { cohortSlug: "demis-hassabis-2025",   rollNumber: "CSE210", fullName: "Zara Khan",        gender: "FEMALE", branch: "CSE" },
+
+  { cohortSlug: "tim-cook-2026",         rollNumber: "CSE301", fullName: "Nitya Suri",       gender: "FEMALE", branch: "CSE" },
+  { cohortSlug: "tim-cook-2026",         rollNumber: "AI302",  fullName: "Ayaan Bakshi",     gender: "MALE",   branch: "AI" },
+  { cohortSlug: "andrew-ng-2026",        rollNumber: "AI320",  fullName: "Tara Ghosh",       gender: "FEMALE", branch: "AI" },
+  { cohortSlug: "andrew-ng-2026",        rollNumber: "AI322",  fullName: "Om Prakash",       gender: "MALE",   branch: "AI" },
+  { cohortSlug: "jerry-sanders-2026",    rollNumber: "CSE330", fullName: "Diya Chaturvedi",  gender: "FEMALE", branch: "CSE" },
 ];
 
 // Sample from official 2026 PS spread — themes reflect real SIH categories.
@@ -104,24 +103,32 @@ async function main() {
   });
   console.log("  ✓ college");
 
-  const cohortMap = new Map<number, string>();
+  const cohortMap = new Map<string, string>();
   for (const c of COHORTS) {
     const row = await prisma.cohort.upsert({
-      where: { collegeId_batchYear: { collegeId: college.id, batchYear: c.batchYear } },
-      update: { displayName: c.displayName, yearOfStudy: c.yearOfStudy, isActive: true },
+      where: { collegeId_slug: { collegeId: college.id, slug: c.slug } },
+      update: {
+        displayName: c.displayName,
+        program: c.program,
+        batchYear: c.batchYear,
+        yearOfStudy: c.yearOfStudy,
+        isActive: true,
+      },
       create: {
         collegeId: college.id,
+        slug: c.slug,
         batchYear: c.batchYear,
         displayName: c.displayName,
+        program: c.program,
         yearOfStudy: c.yearOfStudy,
       },
     });
-    cohortMap.set(c.batchYear, row.id);
+    cohortMap.set(c.slug, row.id);
   }
   console.log(`  ✓ ${COHORTS.length} cohorts`);
 
   for (const s of STUDENTS) {
-    const cohortId = cohortMap.get(s.batchYear)!;
+    const cohortId = cohortMap.get(s.cohortSlug)!;
     const normalizedRoll = normalizeRollNumber(s.rollNumber);
     const emailLocal = `${s.fullName.split(" ")[0].toLowerCase()}.${normalizedRoll.toLowerCase()}`.replace(/[^a-z0-9.]/g, "");
     const rawEmail = `${emailLocal}@${config.college.emailDomain}`;

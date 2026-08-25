@@ -6,18 +6,18 @@ import Image from "next/image";
 import { Alert, Badge, Button, Card, CardBody, CardHeader, Field, Input, Select } from "@/components/ui";
 import { api } from "@/lib/client-fetch";
 
-type Cohort = { batchYear: number; label: string };
+type Cohort = { id: string; slug: string; batchYear: number; displayName: string; program: string; yearOfStudy: number };
 type MemberForm = {
   fullName: string;
   rollNumber: string;
-  batchYear: number;
+  cohortSlug: string;
   gender: "MALE" | "FEMALE" | "OTHER" | "";
   email: string;
   branch: string;
 };
 
-function emptyMember(defaultYear: number): MemberForm {
-  return { fullName: "", rollNumber: "", batchYear: defaultYear, gender: "", email: "", branch: "" };
+function emptyMember(defaultSlug: string): MemberForm {
+  return { fullName: "", rollNumber: "", cohortSlug: defaultSlug, gender: "", email: "", branch: "" };
 }
 
 export function RegistrationForm({
@@ -31,13 +31,13 @@ export function RegistrationForm({
   teamSize: number;
   minFemale: number;
 }) {
-  const defaultYear = cohorts[1]?.batchYear ?? cohorts[0]?.batchYear ?? new Date().getFullYear();
+  const defaultSlug = cohorts[0]?.slug ?? "";
   const [teamName, setTeamName] = useState("");
   const [psNumber, setPsNumber] = useState("");
   const [psTitle, setPsTitle] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [members, setMembers] = useState<MemberForm[]>(() =>
-    Array.from({ length: teamSize }, () => emptyMember(defaultYear)),
+    Array.from({ length: teamSize }, () => emptyMember(defaultSlug)),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +79,7 @@ export function RegistrationForm({
         members: members.map((m) => ({
           fullName: m.fullName,
           rollNumber: m.rollNumber,
-          batchYear: m.batchYear,
+          cohortSlug: m.cohortSlug,
           gender: m.gender,
           email: m.email,
           branch: m.branch,
@@ -211,6 +211,17 @@ function collegeName(domain: string): string {
   return domain.split(".")[0].toUpperCase();
 }
 
+function groupCohorts(list: Cohort[]): Array<[number, Cohort[]]> {
+  const map = new Map<number, Cohort[]>();
+  for (const c of list) {
+    const key = c.batchYear;
+    const arr = map.get(key) ?? [];
+    arr.push(c);
+    map.set(key, arr);
+  }
+  return Array.from(map.entries()).sort(([a], [b]) => a - b);
+}
+
 function SectionHead({ step, title, hint }: { step: number; title: string; hint?: string }) {
   return (
     <div className="flex items-start gap-3">
@@ -251,9 +262,14 @@ function MemberBlock({
           <Input required value={value.fullName} onChange={(e) => onChange({ fullName: e.target.value })} placeholder="e.g. Aarav Sharma" />
         </Field>
         <Field label="Cohort">
-          <Select value={value.batchYear} onChange={(e) => onChange({ batchYear: Number(e.target.value) })}>
-            {cohorts.map((c) => (
-              <option key={c.batchYear} value={c.batchYear}>{c.label} ({c.batchYear})</option>
+          <Select value={value.cohortSlug} onChange={(e) => onChange({ cohortSlug: e.target.value })} required>
+            {cohorts.length === 0 && <option value="">No cohorts loaded</option>}
+            {groupCohorts(cohorts).map(([year, list]) => (
+              <optgroup key={year} label={`Batch ${year} · Year ${list[0].yearOfStudy}`}>
+                {list.map((c) => (
+                  <option key={c.slug} value={c.slug}>{c.displayName} — {c.program}</option>
+                ))}
+              </optgroup>
             ))}
           </Select>
         </Field>

@@ -12,7 +12,7 @@ import { fail, ok } from "@/lib/http";
 const MemberSchema = z.object({
   fullName: z.string().min(2).max(80),
   rollNumber: z.string().min(1).max(32),
-  batchYear: z.number().int().min(2018).max(2035),
+  cohortSlug: z.string().min(1).max(64),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   email: z.string().min(3).max(120),
   branch: z.string().min(1).max(40),
@@ -63,11 +63,22 @@ export async function POST(req: NextRequest) {
     return fail("BAD_TEAM_NAME", "Invalid team name.");
   }
 
+  // Look up every cohort up-front so we can fail fast on a bad slug.
+  const uniqueSlugs = Array.from(new Set(parsed.data.members.map((m) => m.cohortSlug)));
+  const cohortRows = await prisma.cohort.findMany({
+    where: { collegeId: college.id, slug: { in: uniqueSlugs }, isActive: true },
+  });
+  const cohortBySlug = new Map(cohortRows.map((c) => [c.slug, c]));
+  for (const slug of uniqueSlugs) {
+    if (!cohortBySlug.has(slug)) return fail("BAD_COHORT", `Unknown cohort "${slug}". Refresh the page and try again.`);
+  }
+
   // Normalise every member
   type NormalizedMember = {
     fullName: string;
     normalizedRoll: string;
-    batchYear: number;
+    cohortSlug: string;
+    cohortId: string;
     gender: "MALE" | "FEMALE" | "OTHER";
     normalizedEmail: string;
     rawEmail: string;
@@ -94,7 +105,8 @@ export async function POST(req: NextRequest) {
       if (e instanceof ValidationError) return fail("BAD_ROLL", `Member ${i + 1}: ${e.message}`);
       return fail("BAD_ROLL", `Member ${i + 1}: invalid roll number.`);
     }
-    const rollKey = `${m.batchYear}:${rRoll}`;
+    const cohort = cohortBySlug.get(m.cohortSlug)!;
+    const rollKey = `${cohort.id}:${rRoll}`;
     if (seenRollsInThisTeam.has(rollKey)) {
       return fail("DUPLICATE_MEMBER", `Member ${i + 1}: roll ${m.rollNumber} is repeated in this team.`);
     }
@@ -107,7 +119,8 @@ export async function POST(req: NextRequest) {
     norm.push({
       fullName: m.fullName.trim().replace(/\s+/g, " "),
       normalizedRoll: rRoll,
-      batchYear: m.batchYear,
+      cohortSlug: m.cohortSlug,
+      cohortId: cohort.id,
       gender: m.gender,
       normalizedEmail: rEmail,
       rawEmail: m.email.trim(),
@@ -129,29 +142,13 @@ export async function POST(req: NextRequest) {
   // the team-name unique constraint fails, the whole registration rolls back.
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // Upsert cohorts for every batch year we encountered.
-      const cohortIdByYear = new Map<number, string>();
-      for (const year of new Set(norm.map((n) => n.batchYear))) {
-        const displayName = COHORT_LABELS[year] ?? `Batch ${year}`;
-        const yearOfStudy = Math.max(1, new Date().getFullYear() - year + 1);
-        const row = await tx.cohort.upsert({
-          where: { collegeId_batchYear: { collegeId: college.id, batchYear: year } },
-          update: {},
-          create: {
-            collegeId: college.id,
-            batchYear: year,
-            displayName,
-            yearOfStudy,
-          },
-        });
-        cohortIdByYear.set(year, row.id);
-      }
+      // Cohorts are pre-loaded above; just use their IDs.
 
       // Upsert Student rows keyed by (cohort, normalizedRoll). This preserves the
       // core anti-duplicate DB constraint from the spec.
       const studentIds: string[] = [];
       for (const m of norm) {
-        const cohortId = cohortIdByYear.get(m.batchYear)!;
+        const cohortId = m.cohortId;
         const s = await tx.student.upsert({
           where: {
             cohortId_normalizedRollNumber: { cohortId, normalizedRollNumber: m.normalizedRoll },
@@ -246,7 +243,7 @@ export async function POST(req: NextRequest) {
           role: i === 0 ? "LEADER" : "MEMBER",
           fullName: m.fullName,
           rollNumber: m.rawRoll,
-          batchYear: m.batchYear,
+          cohort: m.cohortSlug,
           gender: m.gender,
           email: m.rawEmail,
           branch: m.branch,
@@ -298,9 +295,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-const COHORT_LABELS: Record<number, string> = {
-  2023: "Steve Jobs",
-  2024: "Mark Zuckerberg",
-  2025: "Sam Altman",
-  2026: "Tim Cook",
-};

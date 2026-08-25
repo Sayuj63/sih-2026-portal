@@ -2,17 +2,19 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { RegistrationForm } from "./RegistrationForm";
 import { config } from "@/lib/config";
+import { prisma } from "@/lib/db";
+import { getCollege } from "@/lib/college";
 
 export const dynamic = "force-dynamic";
 
-const COHORTS = [
-  { batchYear: 2023, label: "Steve Jobs — 4th year" },
-  { batchYear: 2024, label: "Mark Zuckerberg — 3rd year" },
-  { batchYear: 2025, label: "Sam Altman — 2nd year" },
-  { batchYear: 2026, label: "Tim Cook — 1st year" },
-];
+export default async function RegisterPage() {
+  const college = await getCollege();
+  const cohorts = await prisma.cohort.findMany({
+    where: { collegeId: college.id, isActive: true },
+    orderBy: [{ batchYear: "asc" }, { displayName: "asc" }],
+    select: { id: true, slug: true, batchYear: true, displayName: true, program: true, yearOfStudy: true },
+  });
 
-export default function RegisterPage() {
   return (
     <AppShell kind="public" actions={<Link href="/" className="text-slate-700 hover:text-indigo-600">Home</Link>}>
       <div className="mx-auto max-w-3xl px-4 py-8 sm:py-10">
@@ -23,7 +25,7 @@ export default function RegisterPage() {
         </div>
 
         <RegistrationForm
-          cohorts={COHORTS}
+          cohorts={cohorts}
           collegeEmailDomain={config.college.emailDomain}
           teamSize={config.team.size}
           minFemale={config.team.minFemaleMembers}

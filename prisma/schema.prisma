@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model College {
@@ -30,8 +30,10 @@ model College {
 model Cohort {
   id           String    @id @default(cuid())
   collegeId    String
+  slug         String
   batchYear    Int
   displayName  String
+  program      String    @default("BTech CSE")
   yearOfStudy  Int
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
@@ -40,7 +42,10 @@ model Cohort {
   college      College   @relation(fields: [collegeId], references: [id])
   students     Student[]
 
-  @@unique([collegeId, batchYear])
+  // Multiple cohorts per batch year are allowed (spec §5, plus real ISU roster).
+  // Uniqueness is on the slug, not the year.
+  @@unique([collegeId, slug])
+  @@index([collegeId, batchYear])
 }
 
 model Student {
