@@ -327,8 +327,20 @@ function GuidelinesBlock({ collegeEmailDomain, teamSize, minFemale }: { collegeE
             <li>Once submitted, the team is locked. Contact the SPOC to correct a mistake.</li>
           </ul>
         </div>
+        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-amber-900 text-sm">
+          <div className="font-bold mb-1">⬇ Download the official SIH 2026 idea-presentation template</div>
+          <p className="text-xs">Every team fills this six-slide template later and uploads it as a PDF on the official SIH portal. It is <b>not</b> uploaded here — this portal is for team registration only.</p>
+          <a
+            href="/SIH2026-Idea-Presentation-Template.pptx"
+            download
+            className="mt-2 inline-flex items-center gap-2 rounded-md bg-amber-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-600"
+          >
+            Download SIH2026-Idea-Presentation-Template.pptx
+          </a>
+        </div>
+
         <div className="rounded-md bg-indigo-50 border border-indigo-200 p-3 text-indigo-900 text-xs">
-          <b>Not required here:</b> idea title, description, PPT/PDF upload, prototype. Those belong to the later stage of the official SIH process.
+          <b>Not required in this form:</b> idea title, description, PPT/PDF upload, prototype. Those belong to the later stage of the official SIH process.
           <a className="ml-1 underline" target="_blank" rel="noopener" href="https://www.sih.gov.in/letters/2026/SIH%202026%20Guidelines.pdf">Full SIH 2026 guidelines PDF ↗</a>
         </div>
       </CardBody>

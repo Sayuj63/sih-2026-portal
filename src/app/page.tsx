@@ -29,6 +29,13 @@ export default function Home() {
                 Register your team →
               </Link>
               <a
+                href="/SIH2026-Idea-Presentation-Template.pptx"
+                download
+                className="rounded-md bg-amber-500 px-5 py-3 text-white font-semibold shadow-sm hover:bg-amber-600"
+              >
+                ⬇ Download PPT template
+              </a>
+              <a
                 href="https://www.sih.gov.in/"
                 target="_blank"
                 rel="noopener"
@@ -36,6 +43,10 @@ export default function Home() {
               >
                 Official SIH portal ↗
               </a>
+            </div>
+
+            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <b>Every team must use the official SIH 2026 idea-presentation template.</b> Download the .pptx above — you&apos;ll submit the filled-in six-slide PDF later on the official SIH portal, not here.
             </div>
 
             <div className="mt-8 grid sm:grid-cols-2 gap-4 text-sm">
