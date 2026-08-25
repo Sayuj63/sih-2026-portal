@@ -12,8 +12,18 @@ function opt(key: string, fallback: string): string {
   return v && v.length > 0 ? v : fallback;
 }
 
+// Supabase's pooler serves TLS via a chain the Node runtime treats as self-signed.
+// Force sslmode=no-verify so the pg driver connects but still encrypts.
+function normalizeDbUrl(url: string): string {
+  if (!url.includes("supabase") && !url.includes("pooler")) return url;
+  if (url.includes("sslmode=no-verify")) return url;
+  return url.replace(/sslmode=[^&]+/, "sslmode=no-verify");
+}
+
 export const config = {
-  databaseUrl: req("DATABASE_URL"),
+  // Runtime uses the pgbouncer-pooled URL when Vercel's Supabase integration
+  // is present; local dev falls back to plain DATABASE_URL.
+  databaseUrl: normalizeDbUrl(opt("POSTGRES_PRISMA_URL", "") || req("DATABASE_URL")),
   sessionSecret: req("SESSION_SECRET"),
   otpPepper: req("OTP_PEPPER"),
 
