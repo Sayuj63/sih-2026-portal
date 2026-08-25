@@ -10,8 +10,8 @@ export function AdminLogoutButton() {
       variant="secondary"
       className="!py-1.5 !px-3 text-sm"
       onClick={async () => {
-        await api("/api/auth/admin/logout", { method: "POST" });
-        router.push("/admin/login");
+        await api("/api/auth/sayuj/logout", { method: "POST" });
+        router.push("/sayuj/login");
         router.refresh();
       }}
     >Sign out</Button>

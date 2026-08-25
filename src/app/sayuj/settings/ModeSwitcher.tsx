@@ -15,7 +15,7 @@ export function ModeSwitcher({ current }: { current: Mode }) {
   async function set(mode: Mode) {
     setError(null);
     setBusy(mode);
-    const r = await api("/api/admin/settings/mode", {
+    const r = await api("/api/sayuj/settings/mode", {
       method: "POST",
       body: JSON.stringify({ mode }),
     });

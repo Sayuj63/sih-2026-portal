@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminOverview() {
   const admin = await requireAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/sayuj/login");
 
   const college = await getCollege();
   const [
@@ -78,7 +78,7 @@ export default async function AdminOverview() {
         <Card>
           <CardHeader className="flex items-center justify-between">
             <h2 className="font-semibold">Top selected PSs</h2>
-            <Link href="/admin/ps" className="text-xs text-indigo-600 underline">Full PS analytics →</Link>
+            <Link href="/sayuj/ps" className="text-xs text-indigo-600 underline">Full PS analytics →</Link>
           </CardHeader>
           <CardBody>
             {topPs.length === 0 ? (
@@ -105,15 +105,15 @@ export default async function AdminOverview() {
         <Card>
           <CardHeader><h2 className="font-semibold">Quick actions</h2></CardHeader>
           <CardBody className="space-y-3 text-sm">
-            <Link href="/admin/teams" className="block rounded border border-slate-200 p-3 hover:bg-slate-50">
+            <Link href="/sayuj/teams" className="block rounded border border-slate-200 p-3 hover:bg-slate-50">
               <div className="font-semibold">Review teams</div>
               <div className="text-slate-500 text-xs">Approve/reject, unlock, audit history.</div>
             </Link>
-            <Link href="/admin/settings" className="block rounded border border-slate-200 p-3 hover:bg-slate-50">
+            <Link href="/sayuj/settings" className="block rounded border border-slate-200 p-3 hover:bg-slate-50">
               <div className="font-semibold">Registration window</div>
               <div className="text-slate-500 text-xs">OPEN · PAUSED · CLOSED</div>
             </Link>
-            <Link href="/admin/audit" className="block rounded border border-slate-200 p-3 hover:bg-slate-50">
+            <Link href="/sayuj/audit" className="block rounded border border-slate-200 p-3 hover:bg-slate-50">
               <div className="font-semibold">Audit log</div>
               <div className="text-slate-500 text-xs">Every sensitive action, timestamped.</div>
             </Link>

@@ -6,9 +6,9 @@ import { getCollege } from "@/lib/college";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminStudents({ searchParams }: PageProps<"/admin/students">) {
+export default async function AdminStudents({ searchParams }: PageProps<"/sayuj/students">) {
   const admin = await requireAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/sayuj/login");
 
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim() : undefined;

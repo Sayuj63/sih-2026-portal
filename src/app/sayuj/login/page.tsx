@@ -18,7 +18,7 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const r = await api<{ role: string; name: string }>("/api/auth/admin/login", {
+    const r = await api<{ role: string; name: string }>("/api/auth/sayuj/login", {
       method: "POST",
       body: JSON.stringify({ username, password }),
     });
@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
       setError(r.error.message);
       return;
     }
-    router.push("/admin");
+    router.push("/sayuj");
     router.refresh();
   }
 

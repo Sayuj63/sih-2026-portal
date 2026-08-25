@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminSettings() {
   const admin = await requireAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/sayuj/login");
 
   const college = await getCollege();
   const mode = await getRegistrationMode(college.id);

@@ -9,10 +9,7 @@ export default function Home() {
     <AppShell
       kind="public"
       actions={
-        <>
-          <a href="https://www.sih.gov.in/letters/2026/SIH%202026%20Guidelines.pdf" target="_blank" rel="noopener" className="text-slate-700 hover:text-indigo-600">Guidelines ↗</a>
-          <Link href="/admin/login" className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50">Admin</Link>
-        </>
+        <a href="https://www.sih.gov.in/letters/2026/SIH%202026%20Guidelines.pdf" target="_blank" rel="noopener" className="text-slate-700 hover:text-indigo-600">Guidelines ↗</a>
       }
     >
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-14">

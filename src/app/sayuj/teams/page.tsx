@@ -8,9 +8,9 @@ import { config } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminTeams({ searchParams }: PageProps<"/admin/teams">) {
+export default async function AdminTeams({ searchParams }: PageProps<"/sayuj/teams">) {
   const admin = await requireAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/sayuj/login");
   const college = await getCollege();
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim() : undefined;

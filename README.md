@@ -1,94 +1,141 @@
 # SIH 2026 — ISU Internal Hackathon Registration Portal
 
-A server-authoritative team-registration portal for the college internal hackathon that qualifies teams for Smart India Hackathon 2026 nomination. This replaces a fragile Google Form workflow with a proper institutional system.
+A team-registration portal for the ISU internal hackathon that qualifies teams for Smart India Hackathon 2026 nomination. Replaces a Google Form with a proper institutional system: server-authoritative validation, a persistent Postgres, an audit log, and a private SPOC console.
 
-Everything a technically capable student could try to spoof — email domain, roll numbers, cohort, gender, one-team-per-student, team-name uniqueness, PS legitimacy, deadlines — is validated on the server against a trusted directory, and enforced at the database layer via unique constraints and transactions.
+**Live:** [sih-2026-portal.vercel.app](https://sih-2026-portal.vercel.app)
 
-## What this portal does
+---
 
-- **Student flow**: OTP login → guidelines → create team → look up 6 members by cohort+roll (never free-text) → look up PS by number → review → final register → registration receipt.
-- **Admin flow**: dashboard KPIs, teams list with filters, team detail with audit history, approve / reject / unlock, PS analytics, student directory browse, deadline mode switcher (OPEN / PAUSED / CLOSED), full audit log.
-- **Anti-gaming**: exact `@isu.ac.in` domain match; cohort-scoped roll uniqueness; single active team per student enforced by DB constraint; team-name normalization + institute-name blacklist; PS lookup against the trusted catalogue; atomic finalize with idempotency key + optimistic version check; race-safe against concurrent registrations.
+## What the portal does
+
+**Students** — one scrollable page at `/register`:
+1. Team details (name + PS number + optional PS title)
+2. Guidelines rendered inline (SIH rules + college-specific rules + ISU cohorts)
+3. Six member cards (name, cohort, roll, branch, gender, college email) — first row is the team leader
+4. Timeline reference image
+5. Acknowledge + submit
+
+No login, no OTP, no idea/PPT upload. Server validates and stores everything in one transaction. Success returns a signed team code (e.g. `ISU-SIH-4100`) and a receipt.
+
+**SPOC / Admins** — dashboard at a private path (see internal setup docs, not linked publicly):
+- KPIs, teams table with filters, per-team detail with full audit history
+- Approve / Reject / Unlock (each requires a reason and is audited)
+- PS analytics (which PS is selected by how many teams)
+- Student directory browser
+- OPEN / PAUSED / CLOSED registration-mode switch
+
+---
+
+## Anti-gaming rules (all server-side)
+
+| Rule | How it's enforced |
+|---|---|
+| Only `@isu.ac.in` email | Exact-match domain check — not substring |
+| Exactly 6 members | Zod + count check |
+| ≥ 1 female member | Roster field, never editable from browser |
+| Unique team name (case-insensitive, whitespace-collapsed) | `UNIQUE(collegeId, normalizedTeamName)` |
+| Institute name in team name | Configurable blacklist |
+| One active team per student | `UNIQUE(studentId, isActive)` — DB catches races |
+| Roll number unique **within** cohort | `UNIQUE(cohortId, normalizedRollNumber)` — same roll across cohorts is legal |
+| PS record must exist | Trusted `problem_statements` table |
+| Multiple teams can pick the same PS | By design (spec §29) |
+| Same team picking same PS twice | `UNIQUE(teamId, psId)` |
+| Deadlines | Server clock only — browser clock is never trusted |
+| Rate limits | Per-IP fixed-window bucket for `/api/register` |
+| Admin password | Argon2 hash |
+| Admin session | `iron-session` cookie: HttpOnly, SameSite=Lax, Secure in prod |
+| Every mutation | Written to `AuditLog` with actor, resource, before/after, IP |
+| Final registration | Single Prisma `$transaction` + optimistic version check |
+
+---
 
 ## Stack
 
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **TypeScript** strict, **Tailwind CSS 4**
-- **Prisma 7** with **SQLite** via `@prisma/adapter-better-sqlite3`
-- **iron-session** for cookie sessions (HttpOnly, SameSite=Lax, Secure in prod)
+- **Prisma 7** with `@prisma/adapter-pg`
+- **Supabase Postgres** (pgbouncer-pooled, wired via the Vercel Supabase integration)
+- **iron-session** for admin session cookies
 - **@node-rs/argon2** for admin password hashing
 - **Zod** for request validation
+- Hosted on **Vercel** (Hobby tier)
 
-## Getting started
+---
+
+## Local development
 
 ```bash
+# 1. Clone
+git clone git@github.com:Sayuj63/sih-2026-portal.git
+cd sih-2026-portal
 npm install
-cp .env.example .env    # then edit SESSION_SECRET and OTP_PEPPER
-npx prisma migrate dev
-npx tsx prisma/seed.ts
+
+# 2. Configure
+cp .env.example .env
+# Fill in DATABASE_URL (any Postgres — Supabase, Neon, local pg), SESSION_SECRET, OTP_PEPPER
+
+# 3. Migrate + seed the demo dataset
+npx prisma migrate deploy
+npm run seed
+
+# 4. Run
 npm run dev
 ```
 
 The seed creates:
-- ISU college
-- 4 cohorts: **Steve Jobs (2023)**, **Mark Zuckerberg (2024)**, **Sam Altman (2025)**, **Tim Cook (2026)**
-- 27 students across genders, branches, and cohorts (deliberately with **shared roll numbers across cohorts** to exercise the `UNIQUE(cohort_id, roll)` rule)
+- ISU college with `@isu.ac.in` domain
+- **11 cohorts**: Steve Jobs (2023); Mark Zuckerberg, Elon Musk, Jensen Huang (2024, BTech CSE); Sam Altman, Larry Page, Jeff Bezos, Demis Hassabis (2025, BTech CSE); Tim Cook, Andrew NG, Jerry Sanders (2026, BTech CSE & AI)
+- 20 sample students
 - 20 sample SIH 2026 problem statements
-- One super admin: `spoc` / `ChangeMe#SIH2026`
+- 1 super admin (`spoc` / default password from `ADMIN_SEED_PASSWORD` env)
 
-In development, OTP codes are printed to the server console. Set `DEV_ECHO_OTP=false` in production and wire up SMTP.
+---
 
-## Demo login
+## Deployment (Vercel + Supabase)
 
-Try the wizard end-to-end:
+The live deployment is a Vercel Hobby project connected via the Supabase marketplace integration. Once installed, Vercel injects `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`, and the Supabase key set into all environments automatically. Migrations run against the direct (non-pooling) URL; runtime uses the pooled URL.
 
-1. Open http://localhost:3000
-2. Click **Student login**
-3. Enter `sayuj.cse101@isu.ac.in` → the OTP prints in the dev terminal
-4. Create team **Nebula**, acknowledge guidelines
-5. Add 5 more members by cohort + roll (mix cohorts to prove cross-cohort teams work). At least one member must be female — e.g. `Mark Zuckerberg + CSE102 (Ananya)`.
-6. Look up PS `SIH-2026-1401` and select it
-7. Register
+Every push to `main` triggers a production build that runs `prisma migrate deploy` before `next build`.
 
-For the admin side, sign in at http://localhost:3000/admin/login as `spoc` / `ChangeMe#SIH2026`.
+---
 
-## Try to break it
+## Project layout
 
-The security model is the point. All of these are already blocked at the API layer — try them yourself:
+```
+prisma/
+  schema.prisma        # single source of truth for the data model
+  seed.ts              # college + cohorts + demo students + PS + admin
+  migrations/          # generated migration history
 
-| Attempt                                           | Expected behaviour                                                |
-|---------------------------------------------------|-------------------------------------------------------------------|
-| `POST /api/auth/student/otp` with `@gmail.com`    | `Only isu.ac.in email addresses are accepted.`                    |
-| Domain trick `x@isu.ac.in.evil.com`               | Same rejection — exact-match, no substring                        |
-| Request the same OTP repeatedly                   | Rate limited after 5 requests / 15 min per email                  |
-| Register two teams as the same leader             | `You already lead a registered team.`                             |
-| Add a student who is already on another team      | Rejected by `UNIQUE(studentId, isActive)` constraint              |
-| Add the same student twice within one team        | Rejected                                                          |
-| Create two teams with the same name (different case, extra spaces) | Rejected via normalized `UNIQUE(collegeId, normalizedTeamName)` |
-| Team name `ISU Rockets`                           | Rejected — institute-name blacklist                               |
-| Look up PS `HACK-9999`                            | 404                                                               |
-| Multiple teams pick `SIH-2026-1401`               | All succeed — this is by design                                   |
-| Double-click **Register team**                    | One registration (idempotency key)                                |
-| Adjust your browser clock to bypass the deadline  | No effect — server clock is authoritative                         |
+src/
+  app/
+    page.tsx           # landing page (timeline image + register CTA)
+    register/          # single-page team registration form + inline guidelines
+    sayuj/             # admin console (login, dashboard, teams, students, PS, audit, settings)
+    api/
+      register/        # POST — atomic team + members + PS + snapshot
+      public/cohorts/  # GET  — populates the cohort dropdown
+      auth/sayuj/      # admin login + logout
+      sayuj/           # admin actions (approve/reject/unlock, mode switch)
+  components/
+    AppShell.tsx       # shared chrome (header + footer)
+    ui.tsx             # Tailwind primitives
+  lib/
+    config.ts          # runtime config; normalizes Supabase's sslmode
+    db.ts              # Prisma client + pg adapter
+    session.ts         # iron-session helpers
+    auth-guard.ts      # server-side admin guard
+    validation.ts      # email/roll/team-name normalization + Zod schemas
+    team-service.ts    # team queries + validateForFinalize()
+    audit.ts           # append-only audit log
+    rate-limit.ts      # fixed-window per-key bucket
+    college.ts         # single-tenant helpers + registration mode
+    team-code.ts       # ISU-SIH-XXXX allocator
+    http.ts            # JSON response helpers
+    client-fetch.ts    # tiny fetch wrapper
+```
 
-## Spec references
-
-The full specification is at `../SIH_2026_Internal_Hackathon_Registration_Portal_FINAL.md`. Key sections wired into the code:
-
-- **§7–§11 identity**: `validation.ts::requireCollegeEmail`, `normalizeEmail`, `normalizeRollNumber`, `normalizeName`
-- **§18 one active team**: `TeamMember @@unique([studentId, isActive])`
-- **§23–§24 team name**: `validation.ts::validateTeamName` + `Team @@unique([collegeId, normalizedTeamName])`
-- **§27–§32 PS lookup**: `api/ps/lookup`, `TeamProblemStatement @@unique([teamId, psId])`, `@@unique([teamId])`
-- **§47–§49 atomic finalize + race safety**: `api/team/finalize/route.ts` with idempotency + version check
-- **§56 role escalation**: server-derived `admin.role` from DB
-- **§60 rate limiting**: `rate-limit.ts` with per-email + per-IP buckets
-- **§76 historical snapshot**: `TeamSnapshot` written inside the finalize transaction
-- **§107 deadline**: `isWithinRegistrationWindow()` uses server time only
-- **§118 data integrity checklist**: mirrored in `team-service.ts::validateForFinalize`
-
-## Deploy
-
-The default SQLite setup runs on Vercel but is ephemeral — for production, swap `DATABASE_URL` to a persistent Postgres (Neon, Vercel Postgres, Supabase) and update `prisma/schema.prisma`'s provider to `postgresql`. All queries are Prisma-agnostic.
+---
 
 ## License
 

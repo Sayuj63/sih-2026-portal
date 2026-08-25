@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPs() {
   const admin = await requireAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/sayuj/login");
 
   const college = await getCollege();
   const psList = await prisma.problemStatement.findMany({

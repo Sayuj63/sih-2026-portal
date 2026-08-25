@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { requireAdmin } from "@/lib/auth-guard";
 import { AdminLogoutButton } from "./AdminLogoutButton";
 
-export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
+export default async function AdminLayout({ children }: LayoutProps<"/sayuj">) {
   // /admin/login is a public shell page — but this layout only wraps /admin/*.
   // Next.js will apply this layout to /admin/login too, so let the login page pass through when unauthenticated.
   const admin = await requireAdmin();
@@ -21,19 +21,19 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
             <AdminLogoutButton />
           </div>
         ) : (
-          <Link href="/admin/login" className="text-slate-700">Sign in</Link>
+          <Link href="/sayuj/login" className="text-slate-700">Sign in</Link>
         )
       }
     >
       {admin && (
         <div className="border-b border-slate-200 bg-white">
           <div className="mx-auto max-w-6xl flex gap-1 overflow-x-auto px-4">
-            <NavLink href="/admin">Overview</NavLink>
-            <NavLink href="/admin/teams">Teams</NavLink>
-            <NavLink href="/admin/students">Students</NavLink>
-            <NavLink href="/admin/ps">Problem statements</NavLink>
-            <NavLink href="/admin/audit">Audit</NavLink>
-            <NavLink href="/admin/settings">Settings</NavLink>
+            <NavLink href="/sayuj">Overview</NavLink>
+            <NavLink href="/sayuj/teams">Teams</NavLink>
+            <NavLink href="/sayuj/students">Students</NavLink>
+            <NavLink href="/sayuj/ps">Problem statements</NavLink>
+            <NavLink href="/sayuj/audit">Audit</NavLink>
+            <NavLink href="/sayuj/settings">Settings</NavLink>
           </div>
         </div>
       )}

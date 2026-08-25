@@ -9,9 +9,9 @@ import { AdminTeamActions } from "./AdminTeamActions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminTeamDetail({ params }: PageProps<"/admin/teams/[id]">) {
+export default async function AdminTeamDetail({ params }: PageProps<"/sayuj/teams/[id]">) {
   const admin = await requireAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/sayuj/login");
   const { id } = await params;
 
   const college = await getCollege();
@@ -29,7 +29,7 @@ export default async function AdminTeamDetail({ params }: PageProps<"/admin/team
     return (
       <div className="mx-auto max-w-3xl px-4 py-10">
         <p>Team not found.</p>
-        <Link href="/admin/teams" className="text-indigo-600 underline">← All teams</Link>
+        <Link href="/sayuj/teams" className="text-indigo-600 underline">← All teams</Link>
       </div>
     );
   }
@@ -46,7 +46,7 @@ export default async function AdminTeamDetail({ params }: PageProps<"/admin/team
     <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <Link href="/admin/teams" className="text-xs text-indigo-600">← All teams</Link>
+          <Link href="/sayuj/teams" className="text-xs text-indigo-600">← All teams</Link>
           <h1 className="mt-1 text-2xl font-bold">{team.teamName}</h1>
           <div className="font-mono text-sm text-slate-500">{team.teamCode}</div>
         </div>

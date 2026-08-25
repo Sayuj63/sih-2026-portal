@@ -10,7 +10,7 @@ export function AppShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const homeHref = kind === "admin" ? "/admin" : "/";
+  const homeHref = kind === "admin" ? "/sayuj" : "/";
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-slate-200 bg-white">

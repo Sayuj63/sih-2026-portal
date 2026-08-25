@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminAudit() {
   const admin = await requireAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/sayuj/login");
 
   const events = await prisma.auditLog.findMany({
     orderBy: { createdAt: "desc" },
