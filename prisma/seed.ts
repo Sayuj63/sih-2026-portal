@@ -20,6 +20,7 @@ const COHORTS = [
   { slug: "tim-cook-2026",         batchYear: 2026, displayName: "Tim Cook",         program: "BTech CSE & AI", yearOfStudy: 1 },
   { slug: "andrew-ng-2026",        batchYear: 2026, displayName: "Andrew NG",        program: "BTech CSE & AI", yearOfStudy: 1 },
   { slug: "jerry-sanders-2026",    batchYear: 2026, displayName: "Jerry Sanders",    program: "BTech CSE & AI", yearOfStudy: 1 },
+  { slug: "mca",                   batchYear: 2026, displayName: "MCA",              program: "MCA",            yearOfStudy: 1 },
 ];
 
 type SeedStudent = {
