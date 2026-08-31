@@ -54,6 +54,12 @@ export default async function AdminTeamDetail({ params }: PageProps<"/sayuj/team
           <Badge tone={team.status === "APPROVED" ? "success" : "info"}>{team.status}</Badge>
           {team.lockedAt && <Badge tone="warning">Locked</Badge>}
           <span className="text-xs text-slate-500">v{team.version}</span>
+          <Link
+            href={`/sayuj/teams/${team.id}/edit`}
+            className="ml-2 inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
+          >
+            Edit team details
+          </Link>
         </div>
       </div>
 

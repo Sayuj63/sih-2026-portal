@@ -94,7 +94,10 @@ export default async function AdminTeams({ searchParams }: PageProps<"/sayuj/tea
                     <td className="px-3 py-2 font-mono text-xs">{ps?.ps.psNumber ?? "—"}</td>
                     <td className="px-3 py-2"><Badge tone={statusTone(t.status)}>{t.status}</Badge></td>
                     <td className="px-3 py-2 text-right">
-                      <Link href={`/admin/teams/${t.id}`} className="text-indigo-600 underline">View</Link>
+                      <div className="inline-flex items-center gap-3">
+                        <Link href={`/sayuj/teams/${t.id}`} className="text-indigo-600 underline">View</Link>
+                        <Link href={`/sayuj/teams/${t.id}/edit`} className="text-slate-700 underline">Edit</Link>
+                      </div>
                     </td>
                   </tr>
                 );

@@ -17,7 +17,7 @@ export function AdminTeamActions({ teamId, status, locked }: { teamId: string; s
       return;
     }
     setBusy(action);
-    const r = await api(`/api/admin/teams/${teamId}/${action}`, {
+    const r = await api(`/api/sayuj/teams/${teamId}/${action}`, {
       method: "POST",
       body: JSON.stringify({ reason }),
     });
