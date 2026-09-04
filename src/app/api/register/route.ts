@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const ip = clientIp(req);
 
   const college = await getCollege();
-  const windowResult = isWithinRegistrationWindow();
+  const windowResult = await isWithinRegistrationWindow(college.id);
   if (!windowResult.ok) return fail("WINDOW_CLOSED", windowResult.reason);
   const mode = await getRegistrationMode(college.id);
   if (mode !== "OPEN") return fail("WINDOW_CLOSED", `Registration is currently ${mode}.`);

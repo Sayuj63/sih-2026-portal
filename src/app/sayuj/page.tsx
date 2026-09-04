@@ -41,7 +41,7 @@ export default async function AdminOverview() {
   ).length;
 
   const mode = await getRegistrationMode(college.id);
-  const window = isWithinRegistrationWindow();
+  const window = await isWithinRegistrationWindow(college.id);
 
   const psAnalytics = await prisma.teamProblemStatement.groupBy({
     by: ["psId"],

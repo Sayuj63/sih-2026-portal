@@ -37,12 +37,49 @@ export async function setRegistrationMode(collegeId: string, mode: RegistrationM
   });
 }
 
+export type RegistrationWindow = { openAt: Date; closeAt: Date };
+
+// Reads the window from AppSetting; falls back to the env-derived defaults in config.
+export async function getRegistrationWindow(collegeId: string): Promise<RegistrationWindow> {
+  const rows = await prisma.appSetting.findMany({
+    where: { collegeId, key: { in: ["REGISTRATION_OPEN_AT", "REGISTRATION_CLOSE_AT"] } },
+  });
+  const byKey = new Map(rows.map((r) => [r.key, r.value]));
+  const openRaw = byKey.get("REGISTRATION_OPEN_AT");
+  const closeRaw = byKey.get("REGISTRATION_CLOSE_AT");
+  const openAt = openRaw ? new Date(openRaw) : config.window.openAt;
+  const closeAt = closeRaw ? new Date(closeRaw) : config.window.closeAt;
+  return {
+    openAt: isNaN(openAt.getTime()) ? config.window.openAt : openAt,
+    closeAt: isNaN(closeAt.getTime()) ? config.window.closeAt : closeAt,
+  };
+}
+
+export async function setRegistrationWindow(collegeId: string, openAt: Date, closeAt: Date) {
+  await prisma.$transaction([
+    prisma.appSetting.upsert({
+      where: { collegeId_key: { collegeId, key: "REGISTRATION_OPEN_AT" } },
+      update: { value: openAt.toISOString() },
+      create: { collegeId, key: "REGISTRATION_OPEN_AT", value: openAt.toISOString() },
+    }),
+    prisma.appSetting.upsert({
+      where: { collegeId_key: { collegeId, key: "REGISTRATION_CLOSE_AT" } },
+      update: { value: closeAt.toISOString() },
+      create: { collegeId, key: "REGISTRATION_CLOSE_AT", value: closeAt.toISOString() },
+    }),
+  ]);
+}
+
 // Server-time deadline check — never trust the browser clock (spec §83, §107).
-export function isWithinRegistrationWindow(now: Date = new Date()): { ok: true } | { ok: false; reason: string } {
-  if (now < config.window.openAt) {
+export async function isWithinRegistrationWindow(
+  collegeId: string,
+  now: Date = new Date(),
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const { openAt, closeAt } = await getRegistrationWindow(collegeId);
+  if (now < openAt) {
     return { ok: false, reason: "Registration has not opened yet." };
   }
-  if (now > config.window.closeAt) {
+  if (now > closeAt) {
     return { ok: false, reason: "Registration deadline has passed." };
   }
   return { ok: true };

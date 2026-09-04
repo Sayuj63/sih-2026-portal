@@ -162,7 +162,7 @@ export async function validateForFinalize(teamId: string): Promise<ValidationRep
   if (!guidelinesOk) errors.push("Leader must acknowledge the SIH guidelines.");
 
   // Deadline window
-  const windowResult = isWithinRegistrationWindow();
+  const windowResult = await isWithinRegistrationWindow(team.collegeId);
   const windowOk = windowResult.ok;
   checks.push({
     key: "window",
