@@ -101,8 +101,8 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/sayuj/teams
   const trimmedPsNumber = input.team.psNumber.trim();
   let targetPsId: string | null = null;
   let targetPsNumber: string | null = null;
+  let normalizedPs: string | null = null;
   if (trimmedPsNumber) {
-    let normalizedPs: string;
     try {
       normalizedPs = normalizePsNumber(trimmedPsNumber);
     } catch (e) {
@@ -112,9 +112,12 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/sayuj/teams
     const ps = await prisma.problemStatement.findUnique({
       where: { collegeId_normalizedPsNumber: { collegeId: college.id, normalizedPsNumber: normalizedPs } },
     });
-    if (!ps) return fail("PS_NOT_FOUND", `Problem statement ${trimmedPsNumber} does not exist.`);
-    targetPsId = ps.id;
-    targetPsNumber = ps.psNumber;
+    if (ps) {
+      targetPsId = ps.id;
+      targetPsNumber = ps.psNumber;
+    } else {
+      targetPsNumber = trimmedPsNumber;
+    }
   }
 
   const validCohortIds = new Set(
@@ -252,11 +255,33 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/sayuj/teams
         },
       });
 
-      if (targetPsId !== (currentPs?.id ?? null)) {
+      let resolvedPsId: string | null = targetPsId;
+      if (!resolvedPsId && normalizedPs && trimmedPsNumber) {
+        const created = await tx.problemStatement.upsert({
+          where: {
+            collegeId_normalizedPsNumber: { collegeId: college.id, normalizedPsNumber: normalizedPs },
+          },
+          update: {},
+          create: {
+            collegeId: college.id,
+            psNumber: trimmedPsNumber,
+            normalizedPsNumber: normalizedPs,
+            title: `Problem Statement ${trimmedPsNumber}`,
+            organization: "Admin-added by SPOC",
+            theme: "Not specified",
+            category: "Not specified",
+            description: "Admin-supplied problem statement — verify against the official SIH portal.",
+          },
+        });
+        resolvedPsId = created.id;
+        targetPsNumber = created.psNumber;
+      }
+
+      if (resolvedPsId !== (currentPs?.id ?? null)) {
         await tx.teamProblemStatement.deleteMany({ where: { teamId: team.id } });
-        if (targetPsId) {
+        if (resolvedPsId) {
           await tx.teamProblemStatement.create({
-            data: { teamId: team.id, psId: targetPsId },
+            data: { teamId: team.id, psId: resolvedPsId },
           });
         }
       }
